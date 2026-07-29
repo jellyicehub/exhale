@@ -52,7 +52,7 @@ export default function SignupPage() {
       return 'Password must be at least 6 characters.';
     if (msg.toLowerCase().includes('invalid email'))
       return 'Please enter a valid email address.';
-    return 'Sign up failed. Please try again.';
+    return `Sign up failed: ${msg}`;
   }
 
   return (
