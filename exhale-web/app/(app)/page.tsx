@@ -8,6 +8,7 @@ import AcidityChart     from '@/components/AcidityChart';
 import CalendarView     from '@/components/CalendarView';
 import ReadingCard      from '@/components/ReadingCard';
 import DeviceStatus     from '@/components/DeviceStatus';
+import AcidityReferenceTable from '@/components/AcidityReferenceTable';
 import type { User } from '@supabase/supabase-js';
 
 import { getAcidityClassification } from '@/lib/readings';
@@ -119,6 +120,8 @@ export default function DashboardPage() {
           onRangeChange={setDateRange}
         />
       </div>
+
+      <AcidityReferenceTable />
 
       {/* Calendar + Recent Readings */}
       <div style={{
