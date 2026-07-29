@@ -18,10 +18,15 @@ export async function middleware(request: NextRequest) {
   // Build a response we can attach cookies to
   let supabaseResponse = NextResponse.next({ request });
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error('MIDDLEWARE ERROR: Missing Supabase environment variables!');
+    return new NextResponse('Internal Server Error: Missing Supabase Environment Variables in Vercel', { status: 500 });
+  }
+
   // Create a Supabase server client that reads/writes cookies on the response
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
