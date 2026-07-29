@@ -65,6 +65,26 @@
   --font-mono:  'JetBrains Mono', 'Fira Code', monospace;
 }
 
+[data-theme="light"] {
+  --color-bg:           #f8fafc;
+  --color-bg-card:      #ffffff;
+  --color-bg-elevated:  #f1f5f9;
+  --color-bg-glass:     rgba(255, 255, 255, 0.75);
+  --color-border:       rgba(0, 0, 0, 0.1);
+  
+  --color-accent:       #009b92;
+  --color-accent-dim:   rgba(0, 155, 146, 0.15);
+  --color-accent-glow:  rgba(0, 155, 146, 0.3);
+
+  --color-text-primary:   #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted:     #94a3b8;
+
+  --shadow-card:   0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-glow:   0 0 15px rgba(0, 155, 146, 0.15);
+  --shadow-inset:  inset 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+
 /* ============================================================
    RESET & BASE
    ============================================================ */

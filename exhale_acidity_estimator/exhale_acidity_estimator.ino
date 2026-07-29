@@ -47,23 +47,37 @@
 #define OLED_RESET     -1
 
 // ============================================================
-//  HENDERSON-HASSELBALCH CONSTANTS
-//
-//  The Acidity Index (AI) uses the Henderson-Hasselbalch equation
-//  to mathematically estimate the pH of exhaled breath condensate
-//  based on CO2, Temperature, and Relative Humidity.
-//  The estimated pH is then mapped to a 0-100 scale.
 // ============================================================
-#define HH_HCO3_MMOL    2.5f    // Assumed baseline bicarbonate (mmol/L)
-#define HH_PH_AMBIENT   8.0f    // Estimated pH mapped to AI = 0
-#define HH_PH_MAX_ACID  5.5f    // Estimated pH mapped to AI = 100
+/*
+EXHALE Acidity Index
+
+This is an experimental engineering index derived from
+SCD41 CO2, temperature, and relative humidity readings.
+
+The index is NOT a direct measurement of physiological pH
+and is NOT a clinically validated diagnostic measurement.
+
+The coefficients used in this formula are initial prototype
+coefficients and must be experimentally calibrated against
+appropriate reference measurements before scientific or
+medical interpretation.
+
+Reference pH is a mathematical reference scale mapped from
+the Acidity Index. It is NOT directly measured by the SCD41.
+*/
+// ============================================================
+//  GLOBAL BASELINE VARIABLES (Personalized)
+// ============================================================
+float baselineCO2 = 40000.0;
+float baselineTemperature = 34.0;
+float baselineHumidity = 90.0;
 
 // ============================================================
 //  BASELINE / SAMPLING SETTINGS
 // ============================================================
 #define BASELINE_SAMPLES         10    // ambient readings at boot
 #define BASELINE_INTERVAL_MS   1500    // wait between baseline samples
-#define BREATH_SAMPLES            3    // readings per breath capture (3 x 5.2s = ~16s)
+#define BREATH_SAMPLES            4    // 5 valid SCD41 readings for average (5 x 5.2s = 26s)
 #define SENSOR_SINGLE_SHOT_MS  5200    // SCD41 single-shot measurement time
 
 // ============================================================
@@ -249,11 +263,28 @@ void loop() {
       if (lastReading.valid) {
         deviceState = STATE_DISPLAY_RESULT;
         resultShownAt = millis();
+        
+        Serial.println("\n================================");
+        Serial.println("EXHALE MEASUREMENT");
+        Serial.println("==================");
+        Serial.println();
+        Serial.printf("CO2: %.0f ppm\n", lastReading.co2);
+        Serial.printf("Temperature: %.1f C\n", lastReading.temp);
+        Serial.printf("Humidity: %.1f %%\n", lastReading.rh);
+        Serial.println("----------------");
+        Serial.println();
+        Serial.printf("Baseline CO2: %.0f ppm\n", baselineCO2);
+        Serial.printf("Baseline Temp: %.1f C\n", baselineTemperature);
+        Serial.printf("Baseline RH: %.1f %%\n", baselineHumidity);
+        Serial.println("-------------------");
+        Serial.println();
+        Serial.printf("Acidity Index: %.1f\n", lastReading.acidityIndex);
+        Serial.printf("Reference pH: %.2f\n", lastReading.estimatedPh);
+        // We will define getAcidityClassification below
+        Serial.printf("Classification: %s\n", getAcidityClassification(lastReading.acidityIndex).c_str());
+        Serial.println("===============================\n");
+
         displayResult(lastReading);
-        Serial.printf("[RESULT] CO2:%.0f ppm  Temp:%.1fC  RH:%.1f%%  AI:%.1f  pH:%.2f\n",
-                      lastReading.co2, lastReading.temp,
-                      lastReading.rh,  lastReading.acidityIndex,
-                      lastReading.estimatedPh);
       } else {
         Serial.println("[IDLE] captureBreath returned no valid data. Back to IDLE.");
         deviceState = STATE_IDLE;
@@ -383,8 +414,8 @@ void calibrateBaseline() {
 // ============================================================
 void captureBreath() {
   Serial.println("Capturing breath sample...");
-  float peakCo2  = -1, peakTemp = 0, peakRh = 0;
-  int   good     = 0;
+  float sumCo2 = 0, sumTemp = 0, sumRh = 0;
+  int   good   = 0;
 
   for (int i = 0; i < BREATH_SAMPLES; i++) {
     displaySampling(i + 1, BREATH_SAMPLES);
@@ -394,11 +425,9 @@ void captureBreath() {
       good++;
       Serial.printf("  [%d/%d] CO2=%.0f Temp=%.1f RH=%.1f\n",
                     i + 1, BREATH_SAMPLES, co2, temp, rh);
-      if (co2 > peakCo2) {
-        peakCo2  = co2;
-        peakTemp = temp;
-        peakRh   = rh;
-      }
+      sumCo2  += co2;
+      sumTemp += temp;
+      sumRh   += rh;
     } else {
       Serial.printf("  [%d/%d] read failed\n", i + 1, BREATH_SAMPLES);
     }
@@ -406,16 +435,28 @@ void captureBreath() {
 
   if (good == 0) {
     lastReading.valid = false;
-    displayError("Sample failed");
+    displayError("INVALID DATA");
+    delay(2000);
+    return;
+  }
+
+  float avgCo2  = sumCo2 / good;
+  float avgTemp = sumTemp / good;
+  float avgRh   = sumRh / good;
+
+  // Basic validation
+  if (avgCo2 <= 0.0f || avgTemp < -10.0f || avgTemp > 80.0f || avgRh < 0.0f || avgRh > 100.0f) {
+    lastReading.valid = false;
+    displayError("INVALID DATA");
     delay(2000);
     return;
   }
 
   float outPh = 0;
-  lastReading.co2          = peakCo2;
-  lastReading.temp         = peakTemp;
-  lastReading.rh           = peakRh;
-  lastReading.acidityIndex = calcAcidityIndex(peakCo2, peakTemp, peakRh, outPh);
+  lastReading.co2          = avgCo2;
+  lastReading.temp         = avgTemp;
+  lastReading.rh           = avgRh;
+  lastReading.acidityIndex = calcAcidityIndex(avgCo2, avgTemp, avgRh, outPh);
   lastReading.estimatedPh  = outPh;
   lastReading.valid        = true;
 
@@ -438,36 +479,43 @@ void captureBreath() {
 }
 
 // ============================================================
-//  HENDERSON-HASSELBALCH ESTIMATED ACIDITY
+//  EXHALE ACIDITY INDEX MODEL
 // ============================================================
 float calcAcidityIndex(float co2, float temp, float rh, float &outPh) {
-  // 1. Water Vapor Pressure using Magnus formula
-  float p_sat_hpa  = 6.112f * exp((17.62f * temp) / (243.12f + temp));
-  float p_h2o_mmhg = (rh / 100.0f) * p_sat_hpa * 0.750062f;
+  // Prevent division by zero
+  float safeBaseline = baselineCO2 > 0 ? baselineCO2 : 40000.0;
+  
+  // AI = 50 - 30 * log10(CO2 / CO2_baseline) + 0.5 * (Temp - Temp_baseline) + 0.05 * (RH - RH_baseline)
+  float ai = 50.0 
+             - 30.0 * log10(co2 / safeBaseline) 
+             + 0.5 * (temp - baselineTemperature) 
+             + 0.05 * (rh - baselineHumidity);
 
-  // 2. Partial pressure of CO2
-  float p_atm = 760.0f;
-  float p_dry = p_atm - p_h2o_mmhg;
-  float pCO2  = (co2 / 1000000.0f) * p_dry;
+  // Constrain AI to 0-100
+  ai = constrain(ai, 0.0f, 100.0f);
 
-  // 3. Temperature corrections
-  float pKa  = 6.10f  + 0.004f * (37.0f - temp);
-  float alpha = 0.0308f + 0.0011f * (37.0f - temp);
-
-  // 4. Henderson-Hasselbalch
-  float hco3        = HH_HCO3_MMOL;
-  float estimated_ph = pKa + log10(hco3 / (alpha * pCO2));
-  outPh = estimated_ph;
-
-  Serial.printf("[pH-CALC] pCO2:%.1fmmHg  pKa:%.2f  alpha:%.3f  -> Est. pH:%.2f\n",
-                pCO2, pKa, alpha, estimated_ph);
-
-  // 5. Map pH -> 0-100 Acidity Index
-  float ai = (HH_PH_AMBIENT - estimated_ph) / (HH_PH_AMBIENT - HH_PH_MAX_ACID) * 100.0f;
-  if (ai < 0.0f)   ai = 0.0f;
-  if (ai > 100.0f) ai = 100.0f;
+  // Reference pH = 7.40 - ((AcidityIndex - 50.0) / 25.0)
+  outPh = 7.40f - ((ai - 50.0f) / 25.0f);
 
   return ai;
+}
+
+String getAcidityClassification(float acidityIndex) {
+  if (acidityIndex <= 20.0f) return "Very Low Acidity";
+  if (acidityIndex <= 40.0f) return "Low Acidity";
+  if (acidityIndex <= 55.0f) return "Normal/Baseline";
+  if (acidityIndex <= 70.0f) return "Slightly Elevated";
+  if (acidityIndex <= 85.0f) return "Elevated";
+  return "Highly Elevated";
+}
+
+String getShortClassification(float acidityIndex) {
+  if (acidityIndex <= 20.0f) return "VERY LOW";
+  if (acidityIndex <= 40.0f) return "LOW";
+  if (acidityIndex <= 55.0f) return "NORMAL";
+  if (acidityIndex <= 70.0f) return "SLIGHT HIGH";
+  if (acidityIndex <= 85.0f) return "ELEVATED";
+  return "HIGH";
 }
 
 // ============================================================
@@ -705,53 +753,72 @@ void displayUploadSuccess(bool success) {
 }
 
 // ============================================================
-//  DISPLAY: RESULTS
-//  4-row layout optimised for 128x32 OLED
-//
-//  y= 0  CO2: XXXX ppm
-//  y= 9  T:XX.XC  RH:XX.X%
-//  y=18  AI:[====-----] XX
-//  y=26  <interpretation>
+//  DISPLAY: RESULTS (3-Screen Sequence)
 // ============================================================
 void displayResult(const Reading &r) {
   if (!r.valid) {
-    displayError("No data");
+    displayError("INVALID DATA");
     return;
   }
 
+  char buf[32];
+  String shortClass = getShortClassification(r.acidityIndex);
+
+  // Screen 1: Raw Data
   oled.clearDisplay();
   oled.setTextSize(1);
-  char buf[32];
-
-  // Row 0: CO2
-  oled.setCursor(4, 0);
+  oled.setCursor(45, 0); oled.print("EXHALE");
+  
+  oled.setCursor(0, 8);
   snprintf(buf, sizeof(buf), "CO2: %.0f ppm", r.co2);
   oled.print(buf);
-
-  // Row 1: Temp + RH
-  oled.setCursor(4, 8);
-  snprintf(buf, sizeof(buf), "T:%.1fC RH:%.1f%%", r.temp, r.rh);
+  
+  oled.setCursor(0, 16);
+  snprintf(buf, sizeof(buf), "Temp: %.1f C", r.temp);
   oled.print(buf);
-
-  // Row 2: AI label + bar + number
-  oled.setCursor(4, 16);
-  oled.print("AI:");
-  int barX  = 24;
-  int barW  = 76;
-  int fillW = (int)((r.acidityIndex / 100.0f) * (float)barW);
-  oled.drawRect(barX, 16, barW, 7, SSD1306_WHITE);
-  oled.fillRect(barX, 16, fillW, 7, SSD1306_WHITE);
-  snprintf(buf, sizeof(buf), "%.0f", r.acidityIndex);
-  oled.setCursor(104, 16);
+  
+  oled.setCursor(0, 24);
+  snprintf(buf, sizeof(buf), "RH: %.1f %%", r.rh);
   oled.print(buf);
+  oled.display();
+  
+  delay(3000);
 
-  // Row 3: interpretation
-  oled.setCursor(4, 24);
-  if      (r.acidityIndex < 20) oled.print("Low acidity");
-  else if (r.acidityIndex < 45) oled.print("Moderate acidity");
-  else if (r.acidityIndex < 70) oled.print("High acidity");
-  else                          oled.print("Very high acidity");
+  // Screen 2: AI and Classification
+  oled.clearDisplay();
+  oled.setTextSize(1);
+  oled.setCursor(25, 0); oled.print("Acidity Index");
+  
+  oled.setTextSize(2);
+  oled.setCursor(20, 8);
+  snprintf(buf, sizeof(buf), "AI:%.1f", r.acidityIndex);
+  oled.print(buf);
+  
+  oled.setTextSize(1);
+  // Center classification
+  int16_t x1, y1; uint16_t w, h;
+  oled.getTextBounds(shortClass.c_str(), 0, 0, &x1, &y1, &w, &h);
+  oled.setCursor((128 - w) / 2, 24);
+  oled.print(shortClass);
+  oled.display();
 
+  delay(3000);
+
+  // Screen 3: Complete Result
+  oled.clearDisplay();
+  oled.setTextSize(1);
+  oled.setCursor(25, 0); oled.print("EXHALE RESULT");
+  
+  oled.setCursor(0, 8);
+  snprintf(buf, sizeof(buf), "AI: %.1f", r.acidityIndex);
+  oled.print(buf);
+  
+  oled.setCursor(0, 16);
+  snprintf(buf, sizeof(buf), "Ref pH: %.2f", r.estimatedPh);
+  oled.print(buf);
+  
+  oled.setCursor(0, 24);
+  oled.print(shortClass);
   oled.display();
 }
 

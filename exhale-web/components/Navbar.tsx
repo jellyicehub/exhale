@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from '@/lib/auth';
+import ThemeToggle from '@/components/ThemeToggle';
 
 interface NavbarProps {
   userName?: string;
@@ -49,6 +50,7 @@ export default function Navbar({ userName }: NavbarProps) {
       </div>
 
       <div className="navbar-user">
+        <ThemeToggle />
         <div className="navbar-avatar" title={userName}>
           {initials}
         </div>

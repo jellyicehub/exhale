@@ -56,3 +56,27 @@ export async function deleteReadings(userId: string): Promise<void> {
     .eq('user_id', userId);
   if (error) throw error;
 }
+
+/**
+ * Returns the classification label for a given Acidity Index (AI).
+ */
+export function getAcidityClassification(ai: number): string {
+  if (ai <= 20) return 'Very Low Acidity';
+  if (ai <= 40) return 'Low Acidity';
+  if (ai <= 55) return 'Normal/Baseline';
+  if (ai <= 70) return 'Slightly Elevated';
+  if (ai <= 85) return 'Elevated';
+  return 'Highly Elevated';
+}
+
+/**
+ * Returns a CSS class name mapped from the AI score.
+ */
+export function getAcidityBadgeClass(ai: number): string {
+  if (ai <= 20) return 'ai-very-low';
+  if (ai <= 40) return 'ai-low';
+  if (ai <= 55) return 'ai-normal';
+  if (ai <= 70) return 'ai-slight-high';
+  if (ai <= 85) return 'ai-elevated';
+  return 'ai-high';
+}

@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { onAuthChange } from '@/lib/auth';
 import { getReadings } from '@/lib/readings';
 import type { Reading, DateRange } from '@/lib/readings';
-import ActiveUserPicker from '@/components/ActiveUserPicker';
 import AcidityChart     from '@/components/AcidityChart';
 import CalendarView     from '@/components/CalendarView';
 import ReadingCard      from '@/components/ReadingCard';
 import type { User } from '@supabase/supabase-js';
+
+import { getAcidityClassification, getAcidityBadgeClass } from '@/lib/readings';
 
 export default function DashboardPage() {
   const [readings,  setReadings]  = useState<Reading[]>([]);
@@ -42,13 +43,6 @@ export default function DashboardPage() {
     : null;
   const lastR    = readings[0];
 
-  function aiLabel(ai: number) {
-    if (ai < 20) return 'Low';
-    if (ai < 45) return 'Moderate';
-    if (ai < 70) return 'High';
-    return 'Very High';
-  }
-
   return (
     <>
       <div className="page-header">
@@ -56,7 +50,31 @@ export default function DashboardPage() {
         <p>Your breath acidity monitoring overview</p>
       </div>
 
-      <ActiveUserPicker />
+      <div className="dashboard-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <select
+          value={dateRange}
+          onChange={(e) => setDateRange(e.target.value as DateRange)}
+          className="date-range-select"
+        >
+          <option value="7days">Last 7 Days</option>
+          <option value="30days">Last 30 Days</option>
+          <option value="90days">Last 90 Days</option>
+        </select>
+        <button 
+          onClick={loadReadings} 
+          disabled={loading}
+          style={{
+            padding: '0.4rem 0.8rem',
+            background: 'var(--color-bg-elevated)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'var(--color-text-primary)',
+            cursor: loading ? 'wait' : 'pointer'
+          }}
+        >
+          {loading ? 'Refreshing...' : 'Refresh Data'}
+        </button>
+      </div>
 
       {/* Summary Stats */}
       <div className="dashboard-stats" style={{ marginBottom: 'var(--space-6)' }}>
@@ -71,7 +89,7 @@ export default function DashboardPage() {
             {loading ? '–' : avgAi !== null ? avgAi.toFixed(1) : '–'}
           </span>
           {avgAi !== null && !loading && (
-            <span className="stat-unit">{aiLabel(avgAi)}</span>
+            <span className="stat-unit">{getAcidityClassification(avgAi)}</span>
           )}
         </div>
 
