@@ -54,6 +54,7 @@ ALTER TABLE public.readings      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.device_config ENABLE ROW LEVEL SECURITY;
 
 -- users: each authenticated user can only access their own row
+DROP POLICY IF EXISTS "users_own_row" ON public.users;
 CREATE POLICY "users_own_row"
   ON public.users
   FOR ALL
@@ -61,17 +62,20 @@ CREATE POLICY "users_own_row"
   WITH CHECK (auth.uid() = id);
 
 -- readings: authenticated users can select/delete only their own
+DROP POLICY IF EXISTS "readings_select_own" ON public.readings;
 CREATE POLICY "readings_select_own"
   ON public.readings
   FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "readings_delete_own" ON public.readings;
 CREATE POLICY "readings_delete_own"
   ON public.readings
   FOR DELETE
   USING (auth.uid() = user_id);
 
 -- readings: authenticated users can insert for themselves
+DROP POLICY IF EXISTS "readings_insert_own" ON public.readings;
 CREATE POLICY "readings_insert_own"
   ON public.readings
   FOR INSERT
@@ -80,18 +84,21 @@ CREATE POLICY "readings_insert_own"
 -- readings: anon key (ESP32 device) can insert readings
 -- The device uses the anon key without user auth.
 -- Scope is limited to the known device_id.
+DROP POLICY IF EXISTS "readings_device_insert" ON public.readings;
 CREATE POLICY "readings_device_insert"
   ON public.readings
   FOR INSERT
   WITH CHECK (device_id = 'exhale-device-01');
 
 -- device_config: anyone (including the ESP32 anon key) can read
+DROP POLICY IF EXISTS "device_config_read" ON public.device_config;
 CREATE POLICY "device_config_read"
   ON public.device_config
   FOR SELECT
   USING (true);
 
 -- device_config: authenticated users can update (website sets active user)
+DROP POLICY IF EXISTS "device_config_update" ON public.device_config;
 CREATE POLICY "device_config_update"
   ON public.device_config
   FOR UPDATE
