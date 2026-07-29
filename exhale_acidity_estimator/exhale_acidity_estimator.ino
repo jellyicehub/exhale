@@ -78,12 +78,9 @@
 
 // ============================================================
 //  WI-FI + FIREBASE CONFIG
-//  Replace these with your actual credentials before flashing.
+//  Credentials are now safely stored in secrets.h (ignored by Git)
 // ============================================================
-#define WIFI_SSID        "your-ssid"
-#define WIFI_PASSWORD    "your-password"
-#define SUPABASE_URL     "https://utbofhftuosakmijxbyg.supabase.co"
-#define SUPABASE_ANON_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0Ym9maGZ0dW9zYWttaWp4YnlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyODcxMDQsImV4cCI6MjEwMDg2MzEwNH0.BEkGITx2fFB9Nhws7XM6U1sOgIMNYhlqenuGQLYH4kY"
+#include "secrets.h"
 #define DEVICE_ID        "exhale-device-01"
 
 // Supabase REST base URL
