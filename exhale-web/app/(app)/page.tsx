@@ -50,16 +50,7 @@ export default function DashboardPage() {
         <p>Your breath acidity monitoring overview</p>
       </div>
 
-      <div className="dashboard-controls" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-        <select
-          value={dateRange}
-          onChange={(e) => setDateRange(e.target.value as DateRange)}
-          className="date-range-select"
-        >
-          <option value="7days">Last 7 Days</option>
-          <option value="30days">Last 30 Days</option>
-          <option value="90days">Last 90 Days</option>
-        </select>
+      <div className="dashboard-controls" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-4)' }}>
         <button 
           onClick={loadReadings} 
           disabled={loading}
