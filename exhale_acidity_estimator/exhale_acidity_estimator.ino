@@ -498,9 +498,9 @@ float calcAcidityIndex(float co2, float temp, float rh, float &outPh) {
   // Prevent division by zero
   float safeBaseline = baselineCO2 > 0 ? baselineCO2 : 40000.0;
   
-  // AI = 50 - 30 * log10(CO2 / CO2_baseline) + 0.5 * (Temp - Temp_baseline) + 0.05 * (RH - RH_baseline)
+  // AI = 50 + 30 * log10(CO2 / CO2_baseline) + 0.5 * (Temp - Temp_baseline) + 0.05 * (RH - RH_baseline)
   float ai = 50.0 
-             - 30.0 * log10(co2 / safeBaseline) 
+             + 30.0 * log10(co2 / safeBaseline) 
              + 0.5 * (temp - baselineTemperature) 
              + 0.05 * (rh - baselineHumidity);
 
