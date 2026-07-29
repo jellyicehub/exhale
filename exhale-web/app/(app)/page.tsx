@@ -7,6 +7,7 @@ import type { Reading, DateRange } from '@/lib/readings';
 import AcidityChart     from '@/components/AcidityChart';
 import CalendarView     from '@/components/CalendarView';
 import ReadingCard      from '@/components/ReadingCard';
+import DeviceStatus     from '@/components/DeviceStatus';
 import type { User } from '@supabase/supabase-js';
 
 import { getAcidityClassification } from '@/lib/readings';
@@ -45,9 +46,12 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="page-header">
-        <h1>Dashboard</h1>
-        <p>Your breath acidity monitoring overview</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1>Dashboard</h1>
+          <p>Your breath acidity monitoring overview</p>
+        </div>
+        <DeviceStatus />
       </div>
 
       <div className="dashboard-controls" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-4)' }}>
