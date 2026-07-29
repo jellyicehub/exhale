@@ -9,7 +9,7 @@ import CalendarView     from '@/components/CalendarView';
 import ReadingCard      from '@/components/ReadingCard';
 import type { User } from '@supabase/supabase-js';
 
-import { getAcidityClassification, getAcidityBadgeClass } from '@/lib/readings';
+import { getAcidityClassification } from '@/lib/readings';
 
 export default function DashboardPage() {
   const [readings,  setReadings]  = useState<Reading[]>([]);
