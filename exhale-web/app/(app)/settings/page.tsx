@@ -1,7 +1,5 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import { useState, useEffect } from 'react';
 import { onAuthChange } from '@/lib/auth';
 import { getActiveUser } from '@/lib/users';
