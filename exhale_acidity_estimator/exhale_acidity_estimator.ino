@@ -30,6 +30,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <WiFiManager.h>
 
 // ============================================================
 //  PIN ASSIGNMENTS — ESP32-C3 SuperMini
@@ -177,6 +178,7 @@ void  displayResult(const Reading &r);
 void  displayUploading();
 void  displayUploadSuccess(bool success);
 void  displayError(const char *msg);
+void  displayWiFiSetup();
 void  pingSupabase();
 
 // ============================================================
@@ -532,21 +534,42 @@ String getShortClassification(float acidityIndex) {
 }
 
 // ============================================================
-//  WI-FI CONNECTION
+//  WI-FI CONNECTION (Captive Portal)
 // ============================================================
-bool connectWiFi() {
-  Serial.printf("[WiFi] Connecting to %s...\n", WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+void displayWiFiSetup() {
+  oled.clearDisplay();
+  oled.setTextSize(1);
+  oled.setCursor(20, 0); oled.print("Wi-Fi Setup");
+  oled.setCursor(0, 14); oled.print("Connect phone to:");
+  oled.setCursor(0, 24); oled.print("EXHALE_Setup");
+  oled.display();
+}
 
-  uint32_t start = millis();
-  while (WiFi.status() != WL_CONNECTED) {
-    if (millis() - start > WIFI_TIMEOUT_MS) {
-      Serial.println("[WiFi] Timeout — continuing offline.");
-      return false;
-    }
-    delay(500);
-    Serial.print(".");
+bool connectWiFi() {
+  Serial.println("[WiFi] Starting WiFiManager...");
+  
+  WiFiManager wm;
+  
+  // Try to connect to saved Wi-Fi for 60 seconds.
+  // If it can't connect, it will open the Captive Portal AP.
+  wm.setConnectTimeout(60);
+
+  // If it enters AP mode (setup), show instructions on OLED
+  wm.setAPCallback([](WiFiManager *myWiFiManager) {
+    Serial.println("[WiFi] Entered AP mode. Waiting for captive portal setup.");
+    displayWiFiSetup();
+  });
+
+  // Attempt to connect silently in the background, or open AP if needed
+  bool res = wm.autoConnect("EXHALE_Setup");
+
+  if (!res) {
+    Serial.println("[WiFi] Failed to connect and hit timeout. Rebooting...");
+    delay(3000);
+    ESP.restart();
+    return false;
   }
+
   Serial.printf("\n[WiFi] Connected. IP: %s\n", WiFi.localIP().toString().c_str());
   return true;
 }
