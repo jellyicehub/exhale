@@ -11,6 +11,7 @@ import DeviceStatus     from '@/components/DeviceStatus';
 import type { User } from '@supabase/supabase-js';
 
 import { getAcidityClassification } from '@/lib/readings';
+import { getSupabase } from '@/lib/supabase';
 
 export default function DashboardPage() {
   const [readings,  setReadings]  = useState<Reading[]>([]);
@@ -27,6 +28,12 @@ export default function DashboardPage() {
     if (!user) return;
     setLoading(true);
     try {
+      // Auto-register this user as the active device user so the ESP32 knows who to upload for
+      await getSupabase()
+        .from('device_config')
+        .update({ active_user_id: user.id, active_user_name: user.email })
+        .eq('id', 1);
+
       const data = await getReadings(user.id, dateRange);
       setReadings(data);
     } catch (err) {
