@@ -58,7 +58,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'device_config' },
-        async (payload) => {
+        async (payload: any) => {
           const newActiveUserId = payload.new?.active_user_id;
           // If device_config now points to a DIFFERENT user, force sign-out here
           if (newActiveUserId && newActiveUserId !== user.id) {
