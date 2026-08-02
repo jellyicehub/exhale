@@ -35,8 +35,8 @@
 // ============================================================
 //  PIN ASSIGNMENTS — ESP32-C3 SuperMini
 // ============================================================
-#define PIN_SDA        4    // I2C SDA (shared by OLED and SCD41)
-#define PIN_SCL        5    // I2C SCL (shared by OLED and SCD41)
+#define PIN_SDA        7    // I2C SDA (shared by OLED and SCD41)
+#define PIN_SCL        6    // I2C SCL (shared by OLED and SCD41)
 #define PIN_BUTTON     9    // Momentary push-button (active LOW, internal pull-up)
 
 // ============================================================
