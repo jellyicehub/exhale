@@ -40,18 +40,36 @@ export async function signUp(
 
 /**
  * Sign in with email + password.
+ * Also registers this user as the active device user in device_config.
  */
 export async function signIn(email: string, password: string): Promise<User> {
-  const { data, error } = await getSupabase().auth.signInWithPassword({ email, password });
+  const supabase = getSupabase();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
+
+  // Register as active device user so ESP32 uploads to this account
+  await supabase
+    .from('device_config')
+    .update({ active_user_id: data.user.id, active_user_name: data.user.email })
+    .eq('id', 1);
+
   return data.user;
 }
 
 /**
  * Sign out the current user.
+ * Also clears the active device user so the ESP32 stops uploading.
  */
 export async function signOut(): Promise<void> {
-  const { error } = await getSupabase().auth.signOut();
+  const supabase = getSupabase();
+  // Clear device active user first (best-effort)
+  try {
+    await supabase
+      .from('device_config')
+      .update({ active_user_id: null, active_user_name: null })
+      .eq('id', 1);
+  } catch { /* ignore */ }
+  const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
 

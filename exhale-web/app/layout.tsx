@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: 'EXHALE — Breath Acidity Monitor',
   description:
     'Real-time breath acidity monitoring and health tracking powered by the EXHALE IoT device.',
+  viewport: 'width=device-width, initial-scale=1',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               (function() {
                 try {
                   var theme = localStorage.getItem('theme');
-                  if (theme === 'light') {
+                  // Default is light mode; dark mode is opt-in
+                  if (theme === 'dark') {
+                    document.documentElement.removeAttribute('data-theme');
+                  } else {
                     document.documentElement.setAttribute('data-theme', 'light');
                   }
                 } catch (e) {}

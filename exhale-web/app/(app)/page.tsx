@@ -12,7 +12,6 @@ import AcidityReferenceTable from '@/components/AcidityReferenceTable';
 import type { User } from '@supabase/supabase-js';
 
 import { getAcidityClassification } from '@/lib/readings';
-import { getSupabase } from '@/lib/supabase';
 
 export default function DashboardPage() {
   const [readings,  setReadings]  = useState<Reading[]>([]);
@@ -29,12 +28,6 @@ export default function DashboardPage() {
     if (!user) return;
     setLoading(true);
     try {
-      // Auto-register this user as the active device user so the ESP32 knows who to upload for
-      await getSupabase()
-        .from('device_config')
-        .update({ active_user_id: user.id, active_user_name: user.email })
-        .eq('id', 1);
-
       const data = await getReadings(user.id, dateRange);
       setReadings(data);
     } catch (err) {
@@ -80,7 +73,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Summary Stats */}
-      <div className="dashboard-stats" style={{ marginBottom: 'var(--space-6)' }}>
+      <div className="dashboard-stats">
         <div className="stat-card">
           <span className="stat-label">Total Readings</span>
           <span className="stat-value">{loading ? '–' : readings.length}</span>
@@ -124,12 +117,7 @@ export default function DashboardPage() {
       <AcidityReferenceTable />
 
       {/* Calendar + Recent Readings */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(280px, 380px) 1fr',
-        gap: 'var(--space-6)',
-        alignItems: 'start',
-      }}>
+      <div className="dashboard-grid-bottom">
         <CalendarView readings={readings} />
 
         <div className="card">
