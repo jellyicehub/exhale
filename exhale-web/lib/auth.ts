@@ -60,15 +60,19 @@ export async function signIn(email: string, password: string): Promise<User> {
  * Sign out the current user.
  * Also clears the active device user so the ESP32 stops uploading.
  */
-export async function signOut(): Promise<void> {
+export async function signOut(clearDeviceConfig: boolean = true): Promise<void> {
   const supabase = getSupabase();
-  // Clear device active user first (best-effort)
-  try {
-    await supabase
-      .from('device_config')
-      .update({ active_user_id: null, active_user_name: null })
-      .eq('id', 1);
-  } catch { /* ignore */ }
+  
+  if (clearDeviceConfig) {
+    // Clear device active user first (best-effort)
+    try {
+      await supabase
+        .from('device_config')
+        .update({ active_user_id: null, active_user_name: null })
+        .eq('id', 1);
+    } catch { /* ignore */ }
+  }
+
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }

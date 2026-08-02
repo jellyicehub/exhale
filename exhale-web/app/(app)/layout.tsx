@@ -64,7 +64,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           // If device_config now points to a DIFFERENT user, force sign-out here
           if (newActiveUserId && newActiveUserId !== user.id) {
             console.log('[Session] Another user logged in — signing out this session.');
-            await signOut();
+            await signOut(false); // Do not clear device_config since it belongs to the new user!
             window.location.href = '/login?reason=another_user';
           }
         }
