@@ -58,6 +58,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'device_config' },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (payload: any) => {
           const newActiveUserId = payload.new?.active_user_id;
           // If device_config now points to a DIFFERENT user, force sign-out here
