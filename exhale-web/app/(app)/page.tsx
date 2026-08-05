@@ -9,18 +9,37 @@ import CalendarView     from '@/components/CalendarView';
 import ReadingCard      from '@/components/ReadingCard';
 import DeviceStatus     from '@/components/DeviceStatus';
 import AcidityReferenceTable from '@/components/AcidityReferenceTable';
+import { getUser } from '@/lib/users';
 import type { User } from '@supabase/supabase-js';
 
 import { getAcidityClassification } from '@/lib/readings';
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export default function DashboardPage() {
   const [readings,  setReadings]  = useState<Reading[]>([]);
   const [dateRange, setDateRange] = useState<DateRange>('7days');
   const [loading,   setLoading]   = useState(true);
   const [user,      setUser]      = useState<User | null>(null);
+  const [userName,  setUserName]  = useState('');
 
   useEffect(() => {
-    const unsub = onAuthChange((u) => setUser(u));
+    const unsub = onAuthChange(async (u) => {
+      setUser(u);
+      if (u) {
+        try {
+          const profile = await getUser(u.id);
+          setUserName(profile?.name ?? u.email ?? '');
+        } catch {
+          setUserName(u.email ?? '');
+        }
+      }
+    });
     return unsub;
   }, []);
 
@@ -49,7 +68,7 @@ export default function DashboardPage() {
     <>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h1>Dashboard</h1>
+          <h1>{getGreeting()}{userName ? `, ${userName.split(' ')[0]}` : ''} 👋</h1>
           <p>Your breath acidity monitoring overview</p>
         </div>
         <DeviceStatus />
