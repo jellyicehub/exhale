@@ -11,7 +11,6 @@ import DeviceStatus     from '@/components/DeviceStatus';
 import AcidityReferenceTable from '@/components/AcidityReferenceTable';
 import { getUser } from '@/lib/users';
 import AbgPanel         from '@/components/AbgPanel';
-import SpO2Input        from '@/components/SpO2Input';
 import type { User } from '@supabase/supabase-js';
 
 import { getAcidityClassification } from '@/lib/readings';
@@ -125,11 +124,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ABG Panel & SpO2 Input (for the latest reading) */}
+      {/* ABG Panel (for the latest reading) */}
       {lastR && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-6)', marginBottom: 'var(--space-6)' }}>
+        <div style={{ marginBottom: 'var(--space-6)' }}>
           <AbgPanel reading={lastR} />
-          <SpO2Input reading={lastR} onUpdate={loadReadings} />
         </div>
       )}
 

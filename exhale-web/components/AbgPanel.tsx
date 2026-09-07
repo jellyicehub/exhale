@@ -31,8 +31,6 @@ export default function AbgPanel({ reading }: AbgPanelProps) {
     { label: 'pCO₂', value: pco2, unit: 'mmHg', range: '35 – 45', ...getStatus(pco2, 35, 45) },
     { label: 'HCO₃⁻', value: hco3, unit: 'mEq/L', range: '22 – 26', ...getStatus(hco3, 22, 26) },
     { label: 'Base Excess', value: be, unit: 'mEq/L', range: '-2 – +2', ...getStatus(be, -2, 2) },
-    { label: 'pO₂', value: po2, unit: 'mmHg', range: '75 – 100', ...getStatus(po2, 75, 100) },
-    { label: 'O₂ Sat', value: o2sat, unit: '%', range: '95 – 100', ...getStatus(o2sat, 95, 100) },
   ];
 
   return (
