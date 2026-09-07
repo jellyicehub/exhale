@@ -81,8 +81,7 @@ export async function POST(req: Request) {
     base_excess = Math.max(-30.0, Math.min(30.0, base_excess));
 
     // Derive Acidity Index from calibrated pH (0 = very alkaline, 100 = very acidic)
-    let ai = 50.0 + ((7.40 - ph) / 0.20) * 50.0;
-    ai = Math.max(0.0, Math.min(100.0, ai));
+    // NOTE: We do NOT overwrite acidity_index — we preserve the ESP32's own calculation.
 
     // --- 3. SAVE TO SUPABASE ---
     // We use the service role key to bypass RLS, or fallback to anon key if not set.
@@ -104,7 +103,7 @@ export async function POST(req: Request) {
       ph_est: parseFloat(ph.toFixed(3)),
       hco3_est_meql: parseFloat(hco3.toFixed(2)),
       base_excess_meql: parseFloat(base_excess.toFixed(2)),
-      acidity_index: parseFloat(ai.toFixed(2)),
+      // acidity_index is intentionally NOT updated here — we keep the ESP32's own value
       calibration_meta,
       ai_processed: true,
     };
