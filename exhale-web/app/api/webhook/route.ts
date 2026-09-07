@@ -94,8 +94,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ status: 'success', reading_id: record.id });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Webhook processing error:', err);
-    return NextResponse.json({ status: 'error', error: err.message }, { status: 500 });
+    return NextResponse.json({ status: 'error', error: err instanceof Error ? err.message : String(err) }, { status: 500 });
   }
 }

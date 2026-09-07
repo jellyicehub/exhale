@@ -16,8 +16,6 @@ export default function AbgPanel({ reading }: AbgPanelProps) {
   const pco2 = isProcessed ? reading.paco2_est_mmhg : null;
   const hco3 = isProcessed ? reading.hco3_est_meql : null;
   const be = isProcessed ? reading.base_excess_meql : null;
-  const po2 = isProcessed ? reading.po2_est_mmhg : null;
-  const o2sat = isProcessed ? reading.o2sat_est_pct : null;
 
   const getStatus = (val: number | null | undefined, min: number, max: number) => {
     if (val == null) return { text: '–', color: 'var(--color-text-tertiary)' };
