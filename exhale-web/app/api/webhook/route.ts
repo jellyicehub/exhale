@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     // Instead we subtract standard atmospheric CO2 (415 ppm) for consistency.
 
     const STANDARD_AMBIENT_PPM = 415.0;   // standard atmospheric CO2 (reliable)
-    const ANCHOR_PPM   = 13871.0;          // user's deepest observed raw breath reading
+    const ANCHOR_PPM   = 18361.0;          // user's deepest observed raw breath reading
     const ANCHOR_PCO2  = 37.2;             // matching clinical pCO2 (mmHg) from lab test
     const LAB_HCO3     = 24.7;             // stable metabolic bicarbonate from lab test
 
