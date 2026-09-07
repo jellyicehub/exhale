@@ -49,18 +49,30 @@ export async function POST(req: Request) {
     // (raw_paco2_est removed because we reverse-engineer paco2 directly from AI)
 
     // --- 2. PERSONALIZED CLINICAL CALIBRATION ---
-    // User's Lab Reference: pH = 7.44, pCO2 = 37.2, HCO3 = 24.7, Base Excess = 0.5
-    // We calibrate the raw sensor reading (max ~38,000 ppm) to hit their clinical baseline.
-    
-    // Scale raw CO2 directly to their clinical PaCO2 baseline
-    let paco2_est_mmhg = (co2_ppm / 38000.0) * 37.2;
-    paco2_est_mmhg = Math.max(10.0, Math.min(100.0, paco2_est_mmhg));
+    // Calibrated from user's actual lab test + real sensor data:
+    //   Lab reference: pH=7.44, pCO2=37.2 mmHg, HCO3=24.7, BE=0.5
+    //   User's maximum observed breath CO2 = 11,880 ppm
+    //   Therefore: 11,880 ppm → pCO2 = 37.2 mmHg (full-scale anchor)
+    //
+    // Ambient baseline (~415 ppm) is subtracted first so only the
+    // breath-above-ambient portion drives the clinical estimate.
 
-    // Use the Henderson-Hasselbalch equation assuming their metabolic HCO3 is stable at their lab value (24.7)
-    let ph = 6.1 + Math.log10(24.7 / (0.03 * paco2_est_mmhg));
+    const ANCHOR_PPM   = 11880.0;  // user's deepest observed breath reading
+    const ANCHOR_PCO2  = 37.2;     // matching clinical pCO2 (mmHg) from lab test
+    const LAB_HCO3     = 24.7;     // stable metabolic bicarbonate from lab test
+
+    // Strip ambient background, then scale to clinical pCO2
+    const breath_delta_ppm = Math.max(0.0, co2_ppm - ambient_co2_ppm);
+    let paco2_est_mmhg = (breath_delta_ppm / ANCHOR_PPM) * ANCHOR_PCO2;
+    // Ensure a physiologically plausible floor (10 mmHg) and ceiling (80 mmHg)
+    paco2_est_mmhg = Math.max(10.0, Math.min(80.0, paco2_est_mmhg));
+
+    // Henderson-Hasselbalch: pH = pKa + log10(HCO3 / (0.03 * pCO2))
+    // Hold HCO3 stable at user's lab value — only respiratory component varies
+    let ph = 6.1 + Math.log10(LAB_HCO3 / (0.03 * paco2_est_mmhg));
     ph = Math.max(6.80, Math.min(7.80, ph));
 
-    // Calculate dynamic HCO3 and Base Excess to match the exact physiological model
+    // Now derive HCO3 and BE dynamically for display accuracy
     const pka = 6.1 + 0.0026 * (37.0 - temperature_c);
     let hco3 = 0.03 * paco2_est_mmhg * Math.pow(10, ph - pka);
     hco3 = Math.max(1.0, Math.min(60.0, hco3));
@@ -68,7 +80,7 @@ export async function POST(req: Request) {
     let base_excess = 0.93 * (hco3 - 24.4 + 14.8 * (ph - 7.4));
     base_excess = Math.max(-30.0, Math.min(30.0, base_excess));
 
-    // Overwrite the ESP32's broken AI with a perfectly calibrated Acidity Index
+    // Derive Acidity Index from calibrated pH (0 = very alkaline, 100 = very acidic)
     let ai = 50.0 + ((7.40 - ph) / 0.20) * 50.0;
     ai = Math.max(0.0, Math.min(100.0, ai));
 
