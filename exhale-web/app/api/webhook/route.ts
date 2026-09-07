@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     const water_vapor_correction_mmhg = etco2_dry_mmhg - etco2_mmhg;
 
     // Dead space correction (+3 mmHg)
-    const raw_paco2_est = etco2_dry_mmhg + 3.0;
+    // (raw_paco2_est removed because we reverse-engineer paco2 directly from AI)
 
     // --- 2. MATCH ABG TO SENSOR ACIDITY INDEX ---
     // Preserve the original Acidity Index from the ESP32 hardware
