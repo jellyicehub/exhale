@@ -31,6 +31,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <WiFiManager.h>
+#include <WiFiClientSecure.h>
 
 // ============================================================
 //  PIN ASSIGNMENTS — ESP32-C3 SuperMini
@@ -601,8 +602,10 @@ bool connectWiFi() {
 String fetchActiveUser() {
   String url = String(REST_BASE) + "/device_config?select=active_user_id,active_user_name&limit=1";
 
+  WiFiClientSecure client;
+  client.setInsecure();
   HTTPClient http;
-  http.begin(url);
+  http.begin(client, url);
   http.addHeader("apikey", SUPABASE_ANON_KEY);
   http.addHeader("Authorization", String("Bearer ") + SUPABASE_ANON_KEY);
   int code = http.GET();
@@ -665,8 +668,10 @@ bool uploadReading(const Reading &r, const String &userId) {
   String body;
   serializeJson(doc, body);
 
+  WiFiClientSecure client;
+  client.setInsecure();
   HTTPClient http;
-  http.begin(url);
+  http.begin(client, url);
   http.addHeader("apikey", SUPABASE_ANON_KEY);
   http.addHeader("Authorization", String("Bearer ") + SUPABASE_ANON_KEY);
   http.addHeader("Content-Type", "application/json");
@@ -696,8 +701,10 @@ void pingSupabase() {
   String body;
   serializeJson(doc, body);
 
+  WiFiClientSecure client;
+  client.setInsecure();
   HTTPClient http;
-  http.begin(url);
+  http.begin(client, url);
   http.addHeader("apikey", SUPABASE_ANON_KEY);
   http.addHeader("Authorization", String("Bearer ") + SUPABASE_ANON_KEY);
   http.addHeader("Content-Type", "application/json");
