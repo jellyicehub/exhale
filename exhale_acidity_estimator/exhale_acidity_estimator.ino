@@ -350,7 +350,7 @@ bool initSCD41() {
   // ASC assumes regular exposure to 400 ppm outdoor air.
   // A breath-sampling device frequently sees 30,000–40,000 ppm,
   // which will cause ASC to wildly miscalibrate the sensor over time.
-  err = scd41.setAutomaticSelfCalibration(0);
+  err = scd41.setAutomaticSelfCalibrationEnabled(0);
   if (err != 0) {
     Serial.printf("SCD41 disable ASC warning: 0x%04X\n", err);
   } else {
