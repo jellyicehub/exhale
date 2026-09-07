@@ -51,19 +51,22 @@ export async function POST(req: Request) {
     // --- 2. PERSONALIZED CLINICAL CALIBRATION ---
     // Calibrated from user's actual lab test + real sensor data:
     //   Lab reference: pH=7.44, pCO2=37.2 mmHg, HCO3=24.7, BE=0.5
-    //   User's maximum observed breath CO2 = 11,880 ppm
-    //   Therefore: 11,880 ppm → pCO2 = 37.2 mmHg (full-scale anchor)
+    //   User's maximum observed breath CO2 = 13,871 ppm (raw sensor reading)
+    //   Therefore: 13,871 ppm raw → pCO2 = 37.2 mmHg (full-scale anchor)
     //
-    // Ambient baseline (~415 ppm) is subtracted first so only the
-    // breath-above-ambient portion drives the clinical estimate.
+    // IMPORTANT: We do NOT subtract the device's ambient reading.
+    // The SCD41 often calibrates with a contaminated ambient baseline
+    // (e.g. 3000+ ppm if the sensor was near a breath during boot).
+    // Instead we subtract standard atmospheric CO2 (415 ppm) for consistency.
 
-    const ANCHOR_PPM   = 11880.0;  // user's deepest observed breath reading
-    const ANCHOR_PCO2  = 37.2;     // matching clinical pCO2 (mmHg) from lab test
-    const LAB_HCO3     = 24.7;     // stable metabolic bicarbonate from lab test
+    const STANDARD_AMBIENT_PPM = 415.0;   // standard atmospheric CO2 (reliable)
+    const ANCHOR_PPM   = 13871.0;          // user's deepest observed raw breath reading
+    const ANCHOR_PCO2  = 37.2;             // matching clinical pCO2 (mmHg) from lab test
+    const LAB_HCO3     = 24.7;             // stable metabolic bicarbonate from lab test
 
-    // Strip ambient background, then scale to clinical pCO2
-    const breath_delta_ppm = Math.max(0.0, co2_ppm - ambient_co2_ppm);
-    let paco2_est_mmhg = (breath_delta_ppm / ANCHOR_PPM) * ANCHOR_PCO2;
+    // Strip standard atmospheric background, then scale to clinical pCO2
+    const breath_delta_ppm = Math.max(0.0, co2_ppm - STANDARD_AMBIENT_PPM);
+    let paco2_est_mmhg = (breath_delta_ppm / (ANCHOR_PPM - STANDARD_AMBIENT_PPM)) * ANCHOR_PCO2;
     // Ensure a physiologically plausible floor (10 mmHg) and ceiling (80 mmHg)
     paco2_est_mmhg = Math.max(10.0, Math.min(80.0, paco2_est_mmhg));
 
