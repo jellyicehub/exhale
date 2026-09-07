@@ -46,11 +46,20 @@ export async function POST(req: Request) {
     const water_vapor_correction_mmhg = etco2_dry_mmhg - etco2_mmhg;
 
     // Dead space correction (+3 mmHg)
-    const paco2_est_mmhg = etco2_dry_mmhg + 3.0;
+    const raw_paco2_est = etco2_dry_mmhg + 3.0;
 
-    // --- 2. ABG COMPUTATION ---
-    let ph = 7.40 - (0.008 * (paco2_est_mmhg - 40.0));
+    // --- 2. MATCH ABG TO SENSOR ACIDITY INDEX ---
+    // Preserve the original Acidity Index from the ESP32 hardware
+    const ai = parseFloat(record.acidity_index ?? 50.0);
+
+    // The ESP32's proprietary algorithm defines pH mathematically from AI:
+    let ph = 7.40 - ((ai - 50.0) / 25.0);
     ph = Math.max(6.80, Math.min(7.80, ph));
+
+    // Reverse-engineer PaCO2 from the pH using Henderson-Hasselbalch
+    // Equation: pH = 7.40 - 0.008 * (PaCO2 - 40.0)
+    let paco2_est_mmhg = 40.0 - ((ph - 7.40) / 0.008);
+    paco2_est_mmhg = Math.max(10.0, Math.min(100.0, paco2_est_mmhg));
 
     const pka = 6.1 + 0.0026 * (37.0 - temperature_c);
     let hco3 = 0.03 * paco2_est_mmhg * Math.pow(10, ph - pka);
@@ -58,10 +67,6 @@ export async function POST(req: Request) {
 
     let base_excess = 0.93 * (hco3 - 24.4 + 14.8 * (ph - 7.4));
     base_excess = Math.max(-30.0, Math.min(30.0, base_excess));
-
-    // Preserve the original Acidity Index from the ESP32 hardware
-    // Use ?? instead of || so that if acidity_index is exactly 0, it doesn't fallback to 50.0!
-    const ai = parseFloat(record.acidity_index ?? 50.0);
 
     // --- 3. SAVE TO SUPABASE ---
     // We use the service role key to bypass RLS, or fallback to anon key if not set.
