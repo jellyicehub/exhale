@@ -23,7 +23,7 @@ export interface Reading {
   o2sat_est_pct?:    number;
   spo2_input_pct?:   number;
   ai_processed?:     boolean;
-  calibration_meta?: any;
+  calibration_meta?: Record<string, unknown>;
 }
 
 /**

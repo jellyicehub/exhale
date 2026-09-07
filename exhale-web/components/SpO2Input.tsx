@@ -41,9 +41,9 @@ export default function SpO2Input({ reading, onUpdate }: SpO2InputProps) {
       // For now, we just call onUpdate to refresh the UI.
       onUpdate();
       setSpo2('');
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || 'Failed to update SpO₂');
+      setError(err instanceof Error ? err.message : 'Failed to update SpO₂');
     } finally {
       setLoading(false);
     }
