@@ -130,10 +130,6 @@ struct Reading {
   float rh;
   float acidityIndex;
   float estimatedPh;
-  // Ambient snapshot captured at boot — sent to cloud AI for environmental calibration
-  float ambientCo2  = 415.0f;
-  float ambientTemp = 25.0f;
-  float ambientRh   = 50.0f;
   bool  valid = false;
 };
 Reading lastReading;
@@ -346,17 +342,6 @@ bool initSCD41() {
     Serial.printf("SCD41 reinit warning: 0x%04X\n", err);
   }
 
-  // *** CRITICAL: Disable Automatic Self-Calibration (ASC) ***
-  // ASC assumes regular exposure to 400 ppm outdoor air.
-  // A breath-sampling device frequently sees 30,000–40,000 ppm,
-  // which will cause ASC to wildly miscalibrate the sensor over time.
-  err = scd41.setAutomaticSelfCalibration(0);
-  if (err != 0) {
-    Serial.printf("SCD41 disable ASC warning: 0x%04X\n", err);
-  } else {
-    Serial.println("SCD41 Automatic Self-Calibration DISABLED (breath mode)");
-  }
-
   uint64_t serialNumber = 0;
   err = scd41.getSerialNumber(serialNumber);
   if (err != 0) {
@@ -488,10 +473,6 @@ void captureBreath() {
   lastReading.rh           = avgRh;
   lastReading.acidityIndex = calcAcidityIndex(avgCo2, avgTemp, avgRh, outPh);
   lastReading.estimatedPh  = outPh;
-  // Carry the ambient baseline snapshot for cloud AI calibration
-  lastReading.ambientCo2   = ambient.valid ? ambient.co2  : 415.0f;
-  lastReading.ambientTemp  = ambient.valid ? ambient.temp : 25.0f;
-  lastReading.ambientRh    = ambient.valid ? ambient.rh   : 50.0f;
   lastReading.valid        = true;
 
   // --- Firebase upload (only if Wi-Fi connected) ---
@@ -649,18 +630,14 @@ String fetchActiveUser() {
 bool uploadReading(const Reading &r, const String &userId) {
   String url = String(REST_BASE) + "/readings";
 
-  StaticJsonDocument<768> doc;
-  doc["user_id"]           = userId;
-  doc["device_id"]         = DEVICE_ID;
-  doc["co2"]               = r.co2;
-  doc["temperature"]       = r.temp;
-  doc["humidity"]          = r.rh;
-  doc["acidity_index"]     = r.acidityIndex;
-  doc["estimated_ph"]      = r.estimatedPh;
-  // Environmental calibration metadata for Cloud AI processing
-  doc["ambient_co2_ppm"]   = r.ambientCo2;
-  doc["ambient_temp_c"]    = r.ambientTemp;
-  doc["ambient_rh_pct"]    = r.ambientRh;
+  StaticJsonDocument<512> doc;
+  doc["user_id"]       = userId;
+  doc["device_id"]     = DEVICE_ID;
+  doc["co2"]           = r.co2;
+  doc["temperature"]   = r.temp;
+  doc["humidity"]      = r.rh;
+  doc["acidity_index"] = r.acidityIndex;
+  doc["estimated_ph"]  = r.estimatedPh;
 
   String body;
   serializeJson(doc, body);

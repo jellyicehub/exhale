@@ -12,6 +12,18 @@ export interface Reading {
   acidity_index: number;
   estimated_ph:  number;
   created_at:    string; // ISO timestamp string
+  // ABG and calibration fields
+  etco2_mmhg?:       number;
+  etco2_dry_mmhg?:   number;
+  paco2_est_mmhg?:   number;
+  ph_est?:           number;
+  hco3_est_meql?:    number;
+  base_excess_meql?: number;
+  po2_est_mmhg?:     number;
+  o2sat_est_pct?:    number;
+  spo2_input_pct?:   number;
+  ai_processed?:     boolean;
+  calibration_meta?: any;
 }
 
 /**
