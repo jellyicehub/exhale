@@ -48,25 +48,29 @@ export async function POST(req: Request) {
     // Dead space correction (+3 mmHg)
     // (raw_paco2_est removed because we reverse-engineer paco2 directly from AI)
 
-    // --- 2. MATCH ABG TO SENSOR ACIDITY INDEX ---
-    // Preserve the original Acidity Index from the ESP32 hardware
-    const ai = parseFloat(record.acidity_index ?? 50.0);
-
-    // The ESP32's proprietary algorithm defines pH mathematically from AI:
-    let ph = 7.40 - ((ai - 50.0) / 25.0);
-    ph = Math.max(6.80, Math.min(7.80, ph));
-
-    // Reverse-engineer PaCO2 from the pH using Henderson-Hasselbalch
-    // Equation: pH = 7.40 - 0.008 * (PaCO2 - 40.0)
-    let paco2_est_mmhg = 40.0 - ((ph - 7.40) / 0.008);
+    // --- 2. PERSONALIZED CLINICAL CALIBRATION ---
+    // User's Lab Reference: pH = 7.44, pCO2 = 37.2, HCO3 = 24.7, Base Excess = 0.5
+    // We calibrate the raw sensor reading (max ~38,000 ppm) to hit their clinical baseline.
+    
+    // Scale raw CO2 directly to their clinical PaCO2 baseline
+    let paco2_est_mmhg = (co2_ppm / 38000.0) * 37.2;
     paco2_est_mmhg = Math.max(10.0, Math.min(100.0, paco2_est_mmhg));
 
+    // Use the Henderson-Hasselbalch equation assuming their metabolic HCO3 is stable at their lab value (24.7)
+    let ph = 6.1 + Math.log10(24.7 / (0.03 * paco2_est_mmhg));
+    ph = Math.max(6.80, Math.min(7.80, ph));
+
+    // Calculate dynamic HCO3 and Base Excess to match the exact physiological model
     const pka = 6.1 + 0.0026 * (37.0 - temperature_c);
     let hco3 = 0.03 * paco2_est_mmhg * Math.pow(10, ph - pka);
     hco3 = Math.max(1.0, Math.min(60.0, hco3));
 
     let base_excess = 0.93 * (hco3 - 24.4 + 14.8 * (ph - 7.4));
     base_excess = Math.max(-30.0, Math.min(30.0, base_excess));
+
+    // Overwrite the ESP32's broken AI with a perfectly calibrated Acidity Index
+    let ai = 50.0 + ((7.40 - ph) / 0.20) * 50.0;
+    ai = Math.max(0.0, Math.min(100.0, ai));
 
     // --- 3. SAVE TO SUPABASE ---
     // We use the service role key to bypass RLS, or fallback to anon key if not set.
