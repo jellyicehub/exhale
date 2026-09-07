@@ -22,16 +22,11 @@ export async function POST(req: Request) {
     const ambient_co2_ppm = parseFloat(record.ambient_co2_ppm || 415.0);
     const pressure_hpa = record.pressure_hpa ? parseFloat(record.pressure_hpa) : 1013.25;
 
-    // The SCD41 sensor physically caps at 40,000 ppm.
-    // True alveolar breath is around 5.5% (55,000 ppm).
-    // Apply a physiological compensation multiplier for realistic ABG estimation.
-    const compensated_co2_ppm = co2_ppm > 10000 ? co2_ppm * 1.375 : co2_ppm;
-
     // --- 1. ENVIRONMENTAL CALIBRATION ---
     const pressure_mmhg = pressure_hpa * 0.750062;
 
     // Subtract ambient to find alveolar delta, then re-anchor
-    const ambient_co2_delta_ppm = Math.max(0.0, compensated_co2_ppm - ambient_co2_ppm);
+    const ambient_co2_delta_ppm = Math.max(0.0, co2_ppm - ambient_co2_ppm);
     const normalised_co2_ppm = 415.0 + ambient_co2_delta_ppm;
 
     const etco2_mmhg = (normalised_co2_ppm / 1000000.0) * pressure_mmhg;
@@ -59,8 +54,9 @@ export async function POST(req: Request) {
     let base_excess = 0.93 * (hco3 - 24.4 + 14.8 * (ph - 7.4));
     base_excess = Math.max(-30.0, Math.min(30.0, base_excess));
 
-    // Preserve the original Acidity Index from the ESP32 hardware
-    let ai = parseFloat(record.acidity_index || '50.0');
+    // Calculate Acidity Index mapping (0-100)
+    let ai = 50.0 + ((7.40 - ph) / 0.20) * 50.0;
+    ai = Math.max(0.0, Math.min(100.0, ai));
 
     // --- 3. SAVE TO SUPABASE ---
     // We use the service role key to bypass RLS, or fallback to anon key if not set.
